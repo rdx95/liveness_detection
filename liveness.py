@@ -23,9 +23,12 @@ def checkLiveness(image_path):
 
     with torch.no_grad():
         prediction = model(torch.unsqueeze(transform(image=image_replay)['image'], 0)).numpy()[0]
-    print(type(prediction[0]))
+
     prediction_list = prediction.tolist();
-    
+    classification = str(np.argmax(prediction_list))
+    result = True if classification == 0 else False;
     return {
-        "predictions": prediction_list
-        };
+        "predictions": prediction_list,
+        "classification": classification,
+        "result": result
+    }

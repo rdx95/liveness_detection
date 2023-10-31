@@ -34,3 +34,6 @@ To kill gunicorn process
 ```
 pkill gunicorn
 ```
+
+
+https://www.slingacademy.com/article/deploying-fastapi-on-ubuntu-with-nginx-and-lets-encrypt/
