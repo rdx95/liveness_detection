@@ -14,7 +14,7 @@ def checkLiveness(image_path):
     model = create_model("tf_efficientnet_b3_ns")
     model.eval();
 
-    image_replay = load_rgb('app/file.png')
+    image_replay = load_rgb(image_path)
 
     transform = albu.Compose([albu.PadIfNeeded(min_height=400, min_width=400),
                           albu.CenterCrop(height=400, width=400),
