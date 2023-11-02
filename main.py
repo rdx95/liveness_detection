@@ -1,4 +1,5 @@
 from fastapi import FastAPI, File, UploadFile, Response, status, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List
 from typing import Annotated
@@ -9,6 +10,15 @@ import os
 from liveness import checkLiveness
 
 app = FastAPI()
+
+origins = ["*"]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 class Feedback(BaseModel):
@@ -49,7 +59,7 @@ async def create_upload_file(file: UploadFile, response: Response):
 @app.post("/liveness/feedback")
 async def getFeedback(body: Feedback, response: Response):
     image_dir = "images/"
-    file_name = body.file_name;
+    file_name = body.file_name
     dir_real = "images/real/"
     dir_fake = "images/fake/"
     image_path = image_dir + file_name
@@ -57,9 +67,7 @@ async def getFeedback(body: Feedback, response: Response):
         os.rename(image_path, dir_real + file_name)
     else:
         os.rename(image_path, dir_fake + file_name)
-    return {
-        'message':"classification success"
-    }
+    return {"message": "classification success"}
 
 
 def getTimestamp():
