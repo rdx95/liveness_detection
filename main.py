@@ -65,11 +65,17 @@ async def getFeedback(body: Feedback, response: Response):
     dir_real = "images/real/"
     dir_fake = "images/fake/"
     image_path = image_dir + file_name
-    if body.classification == True:
-        os.rename(image_path, dir_real + file_name)
-    else:
-        os.rename(image_path, dir_fake + file_name)
-    return {"message": "classification success"}
+    if (os.path.exists(image_path)):
+        if body.classification == True:
+            os.rename(image_path, dir_real + file_name)
+        else:
+            os.rename(image_path, dir_fake + file_name)
+        return {"message": "classification success"}
+    else :
+        raise HTTPException(
+            status_code=404,
+            detail="File Not Found",
+        )
 
 
 def getTimestamp():
