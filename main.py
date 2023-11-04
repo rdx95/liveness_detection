@@ -7,7 +7,8 @@ import aiofiles
 import calendar
 import time
 import os
-from liveness import checkLiveness
+import json
+from liveness import checkLiveness, classifier
 
 app = FastAPI()
 
@@ -42,16 +43,17 @@ async def create_upload_file(file: UploadFile, response: Response):
         async with aiofiles.open(image_path, "wb") as out_file:
             while content := await file.read(1024):  # async read chunk
                 await out_file.write(content)
-            pred = checkLiveness(image_path)
+            prediction = checkLiveness(image_path)
+            classification = classifier(prediction)
     else:
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
             detail=f"File {file.filename} has unsupported extension type",
         )
     return {
-        "predictions": pred["predictions"],
-        "result": pred["result"],
-        "classification": pred["classification"],
+        "predictions": json.dumps(prediction.tolist()),
+        "classification": classification,
+        "result": True if classification == '0' else False,
         "filename": file_name,
     }
 
