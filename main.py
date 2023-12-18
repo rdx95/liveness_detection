@@ -93,6 +93,13 @@ async def detect_liveness(
             file_name = "{fname}.{ext}".format(fname=ts, ext=ext)
             image_dir = "images/"
             image_path = image_dir + file_name
+            
+            async with aiofiles.open(image_path, "wb") as out_file:
+                while content := await image.read(1024):  # async read chunk
+                    await out_file.write(content)
+                prediction = checkLiveness(image_path)
+                classification = classifier(prediction)
+
             payload = {
                 "created_at": time.ctime(),
                 "employee_id": employee_id,
@@ -104,13 +111,9 @@ async def detect_liveness(
                 "device_model": device_model,
                 "camera": camera,
                 "image_path": file_name,
+                "classification": classification,
+                "result": True if classification == "0" else False
             }
-            async with aiofiles.open(image_path, "wb") as out_file:
-                while content := await image.read(1024):  # async read chunk
-                    await out_file.write(content)
-                prediction = checkLiveness(image_path)
-                classification = classifier(prediction)
-
             insert_result = mongo_db.create_document("dataset-meta", payload)
             upload_result = spaces_instance.upload_file(image_path, file_name)
         else:
