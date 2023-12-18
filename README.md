@@ -7,7 +7,7 @@ API to detect liveness of an image
 
   
 
-## How To Run
+## How To Setup
 
 ```
 python -m venv venv
@@ -16,13 +16,24 @@ pip install -r requirements.txt
 ```
 
 *Note: Additional requirements*
+
+
 ```
 
 RUN apt-get update && apt-get install ffmpeg libsm6 libxext6 -y
 
 ```
 
-###
+Create ```.env``` file with the following variabales
+```
+DO_ACCESS_KEY_ID
+DO_SECRET_ACCESS_KEY
+DO_SPACES_NAME
+DO_SPACES_REGION
+DB_URI
+DB_NAME
+```
+## To Run
 
 run using gunicorn
 ```
