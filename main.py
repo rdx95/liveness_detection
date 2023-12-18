@@ -1,4 +1,4 @@
-from fastapi import FastAPI, File, UploadFile, Response, status, HTTPException
+from fastapi import FastAPI, File, UploadFile, Response, status, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List
@@ -9,6 +9,13 @@ import time
 import os
 import json
 from liveness import checkLiveness, classifier
+from model import mongo
+from pymongo import MongoClient
+from spaces import spaces
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = FastAPI()
 
@@ -27,9 +34,18 @@ class Feedback(BaseModel):
     classification: bool
 
 
+mongo_db = mongo.MongoDBClient(os.getenv('DB_URI'), os.getenv('DB_NAME'))
+spaces_instance = spaces.DigitalOceanSpacesClient(
+    os.getenv('DO_ACCESS_KEY_ID'),
+    os.getenv('DO_SECRET_ACCESS_KEY'),
+    os.getenv('DO_SPACES_NAME'),
+    os.getenv('DO_SPACES_REGION')
+)
+
+
 @app.get("/")
 async def root():
-    return {"message": "Hello World!"}
+    return {"message": "welcome to liveness detection service!"}
 
 
 @app.post("/liveness", status_code=200)
@@ -53,9 +69,66 @@ async def create_upload_file(file: UploadFile, response: Response):
     return {
         "predictions": json.dumps(prediction.tolist()),
         "classification": classification,
-        "result": True if classification == '0' else False,
+        "result": True if classification == "0" else False,
         "filename": file_name,
     }
+
+
+@app.post("/beta/detect", status_code=200)
+async def detect_liveness(
+    employee_id: str = Form(...),
+    company_id: str = Form(...),
+    client_id: str = Form(...),
+    shift_name: str = Form(...),
+    punch_type: str = Form(...),
+    device_make: str = Form(...),
+    device_model: str = Form(...),
+    camera: str = Form(...),
+    image: UploadFile = File(...),
+):
+    try:
+        ts = getTimestamp()
+        ext = getExtension(image.content_type)
+        if ext == "jpg":
+            file_name = "{fname}.{ext}".format(fname=ts, ext=ext)
+            image_dir = "images/"
+            image_path = image_dir + file_name
+            payload = {
+                "created_at": time.ctime(),
+                "employee_id": employee_id,
+                "company_id": company_id,
+                "client_id": client_id,
+                "shift_name": shift_name,
+                "punch_type": punch_type,
+                "device_make": device_make,
+                "device_model": device_model,
+                "camera": camera,
+                "image_path": file_name,
+            }
+            async with aiofiles.open(image_path, "wb") as out_file:
+                while content := await image.read(1024):  # async read chunk
+                    await out_file.write(content)
+                prediction = checkLiveness(image_path)
+                classification = classifier(prediction)
+
+            insert_result = mongo_db.create_document("dataset-meta", payload)
+            upload_result = spaces_instance.upload_file(image_path, file_name)
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+                detail=f"File {image.filename} has unsupported extension type",
+            )
+        return {
+            "predictions": json.dumps(prediction.tolist()),
+            "classification": classification,
+            "result": True if classification == "0" else False,
+            "filename": file_name,
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Internal Server error",
+        )
 
 
 @app.post("/liveness/feedback")
@@ -65,13 +138,13 @@ async def getFeedback(body: Feedback, response: Response):
     dir_real = "images/real/"
     dir_fake = "images/fake/"
     image_path = image_dir + file_name
-    if (os.path.exists(image_path)):
+    if os.path.exists(image_path):
         if body.classification == True:
             os.rename(image_path, dir_real + file_name)
         else:
             os.rename(image_path, dir_fake + file_name)
         return {"message": "classification success"}
-    else :
+    else:
         raise HTTPException(
             status_code=404,
             detail="File Not Found",

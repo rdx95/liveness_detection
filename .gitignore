@@ -165,3 +165,4 @@ images/*.jpg
 images/real/*.jpg
 images/fake/*.jpg
 test.py
+*.env

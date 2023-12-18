@@ -28,6 +28,10 @@ run using gunicorn
 ```
 gunicorn main:app -k uvicorn.workers.UvicornWorker
 ```
+```
+gunicorn -k uvicorn.workers.UvicornWorker -w 1 -b 0.0.0.0:8000 app:app
+
+```
 
 
 To kill gunicorn process
