@@ -55,7 +55,7 @@ spaces_instance = spaces.DigitalOceanSpacesClient(
 
 
 @app.get("/")
-async def root(api_key: str = Security(get_api_key)):
+async def root():
     return {"message": "welcome to liveness detection service!"}
 
 
