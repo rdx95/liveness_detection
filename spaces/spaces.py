@@ -7,7 +7,7 @@ class DigitalOceanSpacesClient:
         self.secret_key = secret_key
         self.space_name = space_name
         self.space_region = space_region
-        session = boto3.session.Session()
+        session = boto3.session.Session() # type: ignore
         self.client = session.client('s3',
                                   region_name=self.space_region,
                                   endpoint_url=f'https://{self.space_region}.digitaloceanspaces.com',

@@ -1,7 +1,7 @@
-from fastapi import FastAPI, File, UploadFile, Response, status, HTTPException, Form
+from fastapi import FastAPI, File, UploadFile, Response, status, HTTPException, Form, HTTPException, Security, FastAPI, Header
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import APIKeyHeader
 from pydantic import BaseModel
-from typing import Optional, List
 from typing import Annotated
 import aiofiles
 import calendar
@@ -10,10 +10,10 @@ import os
 import json
 from liveness import checkLiveness, classifier
 from model import mongo
-from pymongo import MongoClient
 from spaces import spaces
 import os
 from dotenv import load_dotenv
+
 
 load_dotenv()
 
@@ -28,13 +28,24 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+SERVICE_API_KEY = os.getenv('SERVICE_API_KEY')
+api_key_header = APIKeyHeader(name="apikey")
+
+def get_api_key(api_key_header: str = Security(api_key_header)) -> str:
+    print(SERVICE_API_KEY)
+    if api_key_header == SERVICE_API_KEY:
+        return api_key_header
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Invalid or missing API Key",
+    )
 
 class Feedback(BaseModel):
     file_name: str
     classification: bool
 
 
-mongo_db = mongo.MongoDBClient(os.getenv('DB_URI'), os.getenv('DB_NAME'))
+mongo_db = mongo.MongoDBClient(os.getenv('DB_URI'), os.getenv('DB_NAME')) # type: ignore
 spaces_instance = spaces.DigitalOceanSpacesClient(
     os.getenv('DO_ACCESS_KEY_ID'),
     os.getenv('DO_SECRET_ACCESS_KEY'),
@@ -44,7 +55,7 @@ spaces_instance = spaces.DigitalOceanSpacesClient(
 
 
 @app.get("/")
-async def root():
+async def root(api_key: str = Security(get_api_key)):
     return {"message": "welcome to liveness detection service!"}
 
 
@@ -76,6 +87,8 @@ async def create_upload_file(file: UploadFile, response: Response):
 
 @app.post("/beta/detect", status_code=200)
 async def detect_liveness(
+    apikey: Annotated[str | None, Header()] = None,
+    api_key: str = Security(get_api_key),
     employee_id: str = Form(...),
     company_id: str = Form(...),
     client_id: str = Form(...),
