@@ -24,3 +24,29 @@ class DigitalOceanSpacesClient:
         except Exception as e:
             print(f"Error uploading file: {e}")
             return False
+        
+
+    def download_file_from_space(self,file_key:str):
+        try:
+            file_stream = self.client.get_object(Bucket=self.space_name, Key=file_key)['Body']
+            return file_stream
+        except NoCredentialsError:
+            print("Credentials not available")
+            return None
+        except Exception as e:
+            print(f"Error downloading file: {e}")
+            return None
+        
+    def move_file_within_space(self, source_key, destination_key):
+        try:
+            # Copy the file to the new location
+            self.client.copy_object(Bucket=self.space_name, CopySource={'Bucket': self.space_name, 'Key': source_key}, Key=destination_key)
+
+            # Delete the original file
+            self.client.delete_object(Bucket=self.space_name, Key=source_key)
+
+            return True
+        except NoCredentialsError:
+            return False
+        except Exception as e:
+            return False

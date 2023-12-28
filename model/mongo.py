@@ -1,3 +1,4 @@
+from unittest import result
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure
 
@@ -24,6 +25,16 @@ class MongoDBClient:
         except Exception as e:
             raise Exception(f"Failed to create document: {e}")
 
+    def read_document(self, collection_name, query=None):
+        try:
+            collection = self.db[collection_name]
+            if query is None:
+                return collection.find_one(query)
+            else:
+                return collection.find_one(query)
+        except Exception as e:
+            raise Exception(f"Failed to read documents: {e}")
+
     def read_documents(self, collection_name, query=None):
         try:
             collection = self.db[collection_name]
@@ -49,3 +60,11 @@ class MongoDBClient:
             return result.deleted_count
         except Exception as e:
             raise Exception(f"Failed to delete document: {e}")
+        
+    def aggregate_pipeline(self, collection_name, pipeline):
+        try:
+            collection = self.db[collection_name]
+            result = collection.aggregate(pipeline)
+            return result
+        except Exception as e:
+            raise Exception(f"Failed to fetch records: {e}")
